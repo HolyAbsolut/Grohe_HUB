@@ -71,8 +71,14 @@ Public Class frmMaininterface
     End Function
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        dbLoad()
+        dbLoad("All")
         xlsTango("C:\Users\HolyAbsolut\Desktop\Grohe_HUB\ex Tango ShipmentsGroheSearch_20180928_133614.xlsx", "Excel Export1")
+        DataGridView1.DataSource = dtShipments
+        'MsgBox(getPartnerID(TextBox1.Text).ToString)
+
+        'dbLoad("dtPartner")
+
+
 
         'MsgBox(dtUNLOC.Rows.Count)
         'DataGridView1.DataSource = dtUNLOC
@@ -81,37 +87,74 @@ Public Class frmMaininterface
     End Sub
 
 
-    Sub dbLoad()
+    Sub dbLoad(ByVal table As String)
         Dim dbPath As String = "C:\Users\HolyAbsolut\Desktop\Grohe_HUB\data.sqlite"
 
-        daShipments = New SQLiteDataAdapter("Select * from dsShipments", "Data Source='" & dbPath & "'")
-        daShipments.Fill(dtShipments)
-        Dim builderdaShipments = New SQLiteCommandBuilder(daShipments)
+        Select Case table
+            Case "dtShipments"
+                daShipments = New SQLiteDataAdapter("Select * from dsShipments", "Data Source='" & dbPath & "'")
+                daShipments.Fill(dtShipments)
+                Dim builderdaShipments = New SQLiteCommandBuilder(daShipments)
+            Case "dtUNLOC"
+                daUNLOC = New SQLiteDataAdapter("Select * from dtUNLOC", "Data Source='" & dbPath & "'")
+                daUNLOC.Fill(dtUNLOC)
+                Dim builderdaUNLOC = New SQLiteCommandBuilder(daUNLOC)
+            Case "dtIncoterm"
+                daIncoterm = New SQLiteDataAdapter("Select * from dtIncoterm", "Data Source='" & dbPath & "'")
+                daIncoterm.Fill(dtIncoterm)
+                Dim builderdaIncoterm = New SQLiteCommandBuilder(daIncoterm)
+            Case "dtPartner"
+                daPartner = New SQLiteDataAdapter("Select * from dsPartner", "Data Source='" & dbPath & "'")
+                daPartner.Fill(dtPartner)
+                Dim builderdaPartner = New SQLiteCommandBuilder(daPartner)
+            Case "dtSettings"
+                daSettings = New SQLiteDataAdapter("Select * from stSettings", "Data Source='" & dbPath & "'")
+                daSettings.Fill(dtSettings)
+                Dim builderdaSettings = New SQLiteCommandBuilder(daSettings)
+            Case Else
+                daShipments = New SQLiteDataAdapter("Select * from dsShipments", "Data Source='" & dbPath & "'")
+                daShipments.Fill(dtShipments)
+                Dim builderdaShipments = New SQLiteCommandBuilder(daShipments)
 
-        daUNLOC = New SQLiteDataAdapter("Select * from dtUNLOC", "Data Source='" & dbPath & "'")
-        daUNLOC.Fill(dtUNLOC)
-        Dim builderdaUNLOC = New SQLiteCommandBuilder(daUNLOC)
+                daUNLOC = New SQLiteDataAdapter("Select * from dtUNLOC", "Data Source='" & dbPath & "'")
+                daUNLOC.Fill(dtUNLOC)
+                Dim builderdaUNLOC = New SQLiteCommandBuilder(daUNLOC)
 
-        daIncoterm = New SQLiteDataAdapter("Select * from dtIncoterm", "Data Source='" & dbPath & "'")
-        daIncoterm.Fill(dtIncoterm)
-        Dim builderdaIncoterm = New SQLiteCommandBuilder(daIncoterm)
+                daIncoterm = New SQLiteDataAdapter("Select * from dtIncoterm", "Data Source='" & dbPath & "'")
+                daIncoterm.Fill(dtIncoterm)
+                Dim builderdaIncoterm = New SQLiteCommandBuilder(daIncoterm)
 
-        daPartner = New SQLiteDataAdapter("Select * from dsPartner", "Data Source='" & dbPath & "'")
-        daPartner.Fill(dtPartner)
-        Dim builderdaPartner = New SQLiteCommandBuilder(daPartner)
+                daPartner = New SQLiteDataAdapter("Select * from dsPartner", "Data Source='" & dbPath & "'")
+                daPartner.Fill(dtPartner)
+                Dim builderdaPartner = New SQLiteCommandBuilder(daPartner)
 
-        daSettings = New SQLiteDataAdapter("Select * from stSettings", "Data Source='" & dbPath & "'")
-        daSettings.Fill(dtSettings)
-        Dim builderdaSettings = New SQLiteCommandBuilder(daSettings)
+                daSettings = New SQLiteDataAdapter("Select * from stSettings", "Data Source='" & dbPath & "'")
+                daSettings.Fill(dtSettings)
+                Dim builderdaSettings = New SQLiteCommandBuilder(daSettings)
+
+        End Select
 
     End Sub
 
-    Sub dbSave()
-        If daShipments IsNot Nothing Then daShipments.Update(dtShipments)
-        If daUNLOC IsNot Nothing Then daUNLOC.Update(dtUNLOC)
-        If daIncoterm IsNot Nothing Then daIncoterm.Update(dtIncoterm)
-        If daPartner IsNot Nothing Then daPartner.Update(dtPartner)
-        If daSettings IsNot Nothing Then daSettings.Update(dtSettings)
+    Sub dbSave(ByVal table As String)
+        Select Case table
+            Case "dtShipments"
+                If daShipments IsNot Nothing Then daShipments.Update(dtShipments)
+            Case "dtUNLOC"
+                If daUNLOC IsNot Nothing Then daUNLOC.Update(dtUNLOC)
+            Case "dtIncoterm"
+                If daIncoterm IsNot Nothing Then daIncoterm.Update(dtIncoterm)
+            Case "dtPartner"
+                If daPartner IsNot Nothing Then daPartner.Update(dtPartner)
+            Case "dtSettings"
+                If daSettings IsNot Nothing Then daSettings.Update(dtSettings)
+            Case Else
+                If daShipments IsNot Nothing Then daShipments.Update(dtShipments)
+                If daUNLOC IsNot Nothing Then daUNLOC.Update(dtUNLOC)
+                If daIncoterm IsNot Nothing Then daIncoterm.Update(dtIncoterm)
+                If daPartner IsNot Nothing Then daPartner.Update(dtPartner)
+                If daSettings IsNot Nothing Then daSettings.Update(dtSettings)
+        End Select
     End Sub
 
 
@@ -129,11 +172,8 @@ Public Class frmMaininterface
     End Sub
 
     Function chkShipment(ByVal STT_No As String, ByVal Archive_No As String) As Integer
-
-
         Dim SQlSearch As String = "Archive_No = '" & STT_No & "' OR STT_No = '" & Archive_No & "'"
         Dim dtSearch As DataTable = dtShipments
-
         'Abfrage
         dtSearch.DefaultView.RowFilter = SQlSearch ' Suche
         If dtSearch.DefaultView.Count = 0 Then
@@ -142,33 +182,6 @@ Public Class frmMaininterface
             chkShipment = 1
         End If
         dtSearch.DefaultView.RowFilter = String.Empty
-        'dtSearch.Clear()
-
-
-
-
-
-
-
-        'Dim archresult() As DataRow = dtShipments.Select("Archive_No = '" & Archive_No & "'")
-
-        'dtShipments.Select()
-        'If archresult.Count = 1 Then
-        '    For Each row As DataRow In archresult
-        '        Return Convert.ToInt32((row(0)))
-        '    Next
-        'End If
-
-        'Dim sttresult() As DataRow = dtShipments.Select("STT_No = '" & STT_No & "'")
-        'dtShipments.Select()
-        'If sttresult.Count = 1 Then
-        '    For Each row As DataRow In sttresult
-        '        Return Convert.ToInt32((row(0)))
-        '    Next
-
-        'End If
-
-        'Return 0 'Else
     End Function
 
 
@@ -212,6 +225,33 @@ Public Class frmMaininterface
         End Select
     End Function
 
+    Function getPartnerID(ByVal PartnerName As String) As Integer
+
+        Dim idPartner As Integer = 0
+        Dim dtSearch As DataTable = dtPartner
+        Dim SQlSearch As String = "PartnerName = '" & PartnerName & "'"
+        dtSearch.DefaultView.RowFilter = SQlSearch ' Suche
+
+        If dtSearch.DefaultView.Count = 1 Then
+            idPartner = Convert.ToInt32(dtSearch.DefaultView.Item(0).Row("Partner_ID").ToString)
+        ElseIf dtSearch.DefaultView.Count = 0 Then
+            Dim dsNewRow As DataRow
+            dsNewRow = dtPartner.NewRow
+            dsNewRow.Item("Created") = TimeToUnix(Date.Now)
+            dsNewRow.Item("PartnerName") = PartnerName
+            dtPartner.Rows.Add(dsNewRow)
+            dbSave("dtPartner")
+            dtPartner.Clear()
+            dbLoad("dtPartner")
+            dtSearch = dtPartner
+            DataGridView1.DataSource = dtPartner
+            dtSearch.DefaultView.RowFilter = SQlSearch ' Suche
+            idPartner = Convert.ToInt32(dtSearch.DefaultView.Item(0).Row("Partner_ID").ToString)
+        End If
+        'dtSearch.DefaultView.RowFilter = String.Empty
+        'dtSearch.Clear()
+        Return idPartner
+    End Function
 
     Sub xlsTango(ByVal xlsFile As String, ByVal xlsTable As String)
         'im Background
@@ -258,17 +298,14 @@ Public Class frmMaininterface
                     dsNewRow.Item("STT_No") = ImportRow("STT No#").ToString.ToString
                     dsNewRow.Item("Archive_No") = ImportRow("Archive No#").ToString
                     dsNewRow.Item("Eco_Month") = ImportRow("Eco# Month").ToString
-                    'dsNewRow.Item("Carrier") = ImportRow("Carrier").ToString
+                    dsNewRow.Item("Carrier") = getPartnerID(ImportRow("Carrier").ToString)
                     dsNewRow.Item("Vessel") = ImportRow("Vessel/Airline Code/Truck").ToString
                     dsNewRow.Item("dtnETD") = TimeToUnix(Convert.ToDateTime(ImportRow("ETD (Date)")))
-                    'dsNewRow.Item("ETD_Time") = ImportRow(My.Settings.sttFile2C26)
                     dsNewRow.Item("dtnETA") = TimeToUnix(Convert.ToDateTime(ImportRow("ETA (Date)")))
-                    'dsNewRow.Item("ETA_Time") = ImportRow(My.Settings.sttFile2C28)
                     dsNewRow.Item("Weight") = ImportRow("Gross Weight (weight)").ToString().Replace("KGS ", "").Replace(".", ",")
                     dsNewRow.Item("Volume") = ImportRow("Volume (volume)").ToString().Replace("CBM ", "").Replace(".", ",")
-                    'dsNewRow.Item("Principal") = ImportRow("Principal Name").ToString
-                    'dsNewRow.Item("Shipper") = ImportRow("Shipper Name").ToString
-                    'dsNewRow.Item("Consignee") = ImportRow("Consignee Name").ToString
+                    dsNewRow.Item("Shipper") = getPartnerID(ImportRow("Shipper Name").ToString)
+                    dsNewRow.Item("Consignee") = getPartnerID(ImportRow("Consignee Name").ToString)
                     If ImportRow("HB/L No#").ToString <> "" Then
                         dsNewRow.Item("HBL_No") = ImportRow("HB/L No#").ToString
                     Else
@@ -300,13 +337,11 @@ Public Class frmMaininterface
         'ImportDtSet.Clear()
         'MsgBox("Done")
         'MsgBox(Me.GroheDataSet.Grohe_Accounting.Count - initCount & " Sendungen importiert.")
-        dbSave()
+        dbSave("dtShipments")
         MsgBox("Done")
     End Sub
 
-
-
-
-
-
+    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        DataGridView1.DataSource = dtPartner
+    End Sub
 End Class
