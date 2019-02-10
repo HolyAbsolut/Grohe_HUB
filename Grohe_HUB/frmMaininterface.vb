@@ -71,6 +71,7 @@ Public Class frmMaininterface
                 daShipments = New SQLiteDataAdapter("Select * from dsShipments", "Data Source='" & dbPath & "'")
                 daShipments.Fill(dtShipments)
                 Dim builderdaShipments = New SQLiteCommandBuilder(daShipments)
+                dtShipments.PrimaryKey = New DataColumn() {dtShipments.Columns(0)}
             Case "dtUNLOC"
                 daUNLOC = New SQLiteDataAdapter("Select * from dtUNLOC", "Data Source='" & dbPath & "'")
                 daUNLOC.Fill(dtUNLOC)
@@ -83,6 +84,7 @@ Public Class frmMaininterface
                 daPartner = New SQLiteDataAdapter("Select * from dsPartner", "Data Source='" & dbPath & "'")
                 daPartner.Fill(dtPartner)
                 Dim builderdaPartner = New SQLiteCommandBuilder(daPartner)
+                dtPartner.PrimaryKey = New DataColumn() {dtPartner.Columns(0)}
             Case "dtSettings"
                 daSettings = New SQLiteDataAdapter("Select * from stSettings", "Data Source='" & dbPath & "'")
                 daSettings.Fill(dtSettings)
@@ -95,6 +97,7 @@ Public Class frmMaininterface
                 daShipments = New SQLiteDataAdapter("Select * from dsShipments", "Data Source='" & dbPath & "'")
                 daShipments.Fill(dtShipments)
                 Dim builderdaShipments = New SQLiteCommandBuilder(daShipments)
+                dtShipments.PrimaryKey = New DataColumn() {dtShipments.Columns(0)}
 
                 daUNLOC = New SQLiteDataAdapter("Select * from dtUNLOC", "Data Source='" & dbPath & "'")
                 daUNLOC.Fill(dtUNLOC)
@@ -107,6 +110,7 @@ Public Class frmMaininterface
                 daPartner = New SQLiteDataAdapter("Select * from dsPartner", "Data Source='" & dbPath & "'")
                 daPartner.Fill(dtPartner)
                 Dim builderdaPartner = New SQLiteCommandBuilder(daPartner)
+                dtPartner.PrimaryKey = New DataColumn() {dtPartner.Columns(0)}
 
                 daSettings = New SQLiteDataAdapter("Select * from stSettings", "Data Source='" & dbPath & "'")
                 daSettings.Fill(dtSettings)
@@ -172,7 +176,6 @@ Public Class frmMaininterface
         dtSearch.DefaultView.RowFilter = String.Empty
     End Function
 
-
     Function Incoterm(ByVal TangoIncoterm As String) As String
         Incoterm = ""
         Select Case TangoIncoterm
@@ -232,7 +235,6 @@ Public Class frmMaininterface
             dtPartner.Clear()
             dbLoad("dtPartner")
             dtSearch = dtPartner
-            DataGridView1.DataSource = dtPartner
             dtSearch.DefaultView.RowFilter = SQlSearch ' Suche
             idPartner = Convert.ToInt32(dtSearch.DefaultView.Item(0).Row("Partner_ID").ToString)
         End If
@@ -264,6 +266,15 @@ Public Class frmMaininterface
         End If
     End Function
 
+    Function getPartnerName(ByVal PartnerID As Integer) As String
+        Dim SQlSearch As String = "Partner_ID = '" & PartnerID & "'"
+        dtPartner.DefaultView.RowFilter = SQlSearch ' Suche
+        If dtPartner.DefaultView.Count = 1 Then
+            Return dtPartner.Rows.Find(PartnerID).Item("PartnerName").ToString
+        Else
+            Return ""
+        End If
+    End Function
 
     'SUBs
     Sub chkUNLOC(ByVal UNLOC As String)
@@ -369,15 +380,121 @@ Public Class frmMaininterface
     'Buttons
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
         xlsTango("C:\Users\HolyAbsolut\Desktop\Grohe_HUB\ex Tango ShipmentsGroheSearch_20180928_133614.xlsx", "Excel Export1")
-        DataGridView1.DataSource = dtShipments
 
     End Sub
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
-        DataGridView1.DataSource = dtLocTranslate
+
         Dim str As String = "CNSHA"
         MsgBox(str.Substring(2, 3))
     End Sub
 
+    Function getShipmentID(ByVal refSearch As String) As Integer
+        Dim dtSearch As DataTable = dtShipments
+        Dim SQlSearch As String = "STT_No = '" & refSearch & "' OR ARCHIVE_NO ='" & refSearch & "'OR HBL_No ='" & refSearch & "'OR MBL_No ='" & refSearch & "'"
+        dtSearch.DefaultView.RowFilter = SQlSearch ' Suche
 
+        If dtSearch.DefaultView.Count = 1 Then
+            Return Convert.ToInt32(dtSearch.DefaultView.Item(0).Row("Shipment_ID").ToString)
+        Else
+            Return 0
+        End If
+    End Function
+
+
+    Function getDate(ByVal dtnString As String) As Date
+        Try
+            Select Case dtnString.Length
+                Case 0
+                    getDate = Nothing
+                Case 6
+                    getDate = DateTime.ParseExact(dtnString, "ddMMyy", Globalization.CultureInfo.InvariantCulture)
+                Case 8
+                    If dtnString.Contains("."c) Then getDate = DateTime.ParseExact(dtnString, "dd.MM.yy", Globalization.CultureInfo.InvariantCulture)
+                    If dtnString.Contains("/"c) Then getDate = DateTime.ParseExact(dtnString, "dd/MM/yy", Globalization.CultureInfo.InvariantCulture)
+                    If getDate.ToString = "" Then
+                        getDate = DateTime.ParseExact(dtnString, "ddMMyyyy", Globalization.CultureInfo.InvariantCulture)
+                    Else
+                        getDate = Nothing
+                    End If
+                Case 10
+                    getDate = DateTime.ParseExact(dtnString, "dd.MM.yyyy", Globalization.CultureInfo.InvariantCulture)
+                Case 19
+                    getDate = DateTime.ParseExact(dtnString, "dd.MM.yyyy hh:mm:ss", Globalization.CultureInfo.InvariantCulture)
+                Case Else
+                    getDate = Nothing
+                    MsgBox("Format unkown")
+            End Select
+        Catch ex As Exception
+            getDate = Nothing
+            MsgBox("Format unkown")
+        End Try
+    End Function
+
+    Sub PopulateForm(ByVal ShipmentId As Integer)
+
+        'Suche
+        Dim SQlSearch As String = "Shipment_ID = '" & ShipmentId & "'"
+        'Abfrage
+        dtShipments.DefaultView.RowFilter = SQlSearch ' Suche
+        If dtShipments.DefaultView.Count <> 1 Then Exit Sub
+
+        txtSTT.Text = dtShipments.Rows.Find(ShipmentId).Item("STT_No").ToString
+        txtArchive.Text = dtShipments.Rows.Find(ShipmentId).Item("Archive_No").ToString
+        txtHBL.Text = dtShipments.Rows.Find(ShipmentId).Item("HBL_No").ToString
+        txtMBL.Text = dtShipments.Rows.Find(ShipmentId).Item("MBL_No").ToString
+
+        cmbService.Text = dtShipments.Rows.Find(ShipmentId).Item("Service").ToString
+        cmbIncoterm.Text = dtShipments.Rows.Find(ShipmentId).Item("Incoterm").ToString
+        txtIncotermLoc.Text = dtShipments.Rows.Find(ShipmentId).Item("Incoterm_Loc").ToString
+        txtPOL.Text = dtShipments.Rows.Find(ShipmentId).Item("POL").ToString
+        txtPOD.Text = dtShipments.Rows.Find(ShipmentId).Item("POD").ToString
+        dtnPickUp.Text = UnixToTime(dtShipments.Rows.Find(ShipmentId).Item("dtnPick_Up").ToString).ToShortDateString
+        dtnETD.Text = UnixToTime(dtShipments.Rows.Find(ShipmentId).Item("dtnETD").ToString).ToShortDateString
+        dtnETA.Text = UnixToTime(dtShipments.Rows.Find(ShipmentId).Item("dtnETA").ToString).ToShortDateString
+
+        txtShipper.Text = getPartnerName(Convert.ToInt32(dtShipments.Rows.Find(ShipmentId).Item("Shipper").ToString))
+        txtConsignee.Text = getPartnerName(Convert.ToInt32(dtShipments.Rows.Find(ShipmentId).Item("Consignee").ToString))
+        txtCarrier.Text = getPartnerName(Convert.ToInt32(dtShipments.Rows.Find(ShipmentId).Item("Carrier").ToString))
+
+        num20DC.Text = dtShipments.Rows.Find(ShipmentId).Item("Cont20DC").ToString
+        num40DC.Text = dtShipments.Rows.Find(ShipmentId).Item("Cont40DC").ToString
+        num40HQ.Text = dtShipments.Rows.Find(ShipmentId).Item("Cont40HQ").ToString
+        'numTEU.Text 
+
+        numVolume.Text = dtShipments.Rows.Find(ShipmentId).Item("Volume").ToString
+        numWeight.Text = dtShipments.Rows.Find(ShipmentId).Item("Weight").ToString
+
+    End Sub
+
+
+    Private Sub btnSearch_Click(sender As Object, e As EventArgs) Handles btnSearch.Click
+        txtSearch.Text = "87620033077772"
+        PopulateForm(getShipmentID(txtSearch.Text))
+
+
+        'MsgBox(dtSearch.DefaultView.Count)
+    End Sub
+
+
+    Private Sub OnlyNumeric(ByVal sender As Object, ByVal e As System.Windows.Forms.KeyPressEventArgs) Handles num20DC.KeyPress, num40DC.KeyPress, num40HQ.KeyPress, numTEU.KeyPress, txtSTT.KeyPress, numWeight.KeyPress, numVolume.KeyPress, numOanda.KeyPress, dtnETD.KeyPress, dtnETA.KeyPress, dtnPickUp.KeyPress
+        Select Case Asc(e.KeyChar)
+            Case 48 To 57, 8, 44
+                ' Zahlen, Backspace und Komma zulassen
+            Case Else
+                ' alle anderen Eingaben unterdrücken
+                e.Handled = True
+        End Select
+
+    End Sub
+
+    Private Sub dtnConvert(ctlButton As Object, e As EventArgs) Handles dtnPickUp.Leave, dtnETD.Leave, dtnETA.Leave
+        'dtnPickUp.Text = getDate(dtnPickUp.Text).ToShortDateString
+        Dim sender As Control = CType(ctlButton, Control)
+        If sender.Text = "" Then
+            'DsDemag_HUB.dsShipments.Rows.Find(Shipment_IDTextBox.Text).Item(sender.Name) = System.DBNull.Value
+        Else
+            sender.Text = getDate(sender.Text).ToShortDateString
+        End If
+    End Sub
 End Class
