@@ -10,11 +10,13 @@ Public Class frmMaininterface
     Private daIncoterm As SQLiteDataAdapter
     Private daPartner As SQLiteDataAdapter
     Private daSettings As SQLiteDataAdapter
+    Private daLocTranslate As SQLiteDataAdapter
     Dim dtShipments As New DataTable("dtShipments")
     Dim dtUNLOC As New DataTable("dtUNLOC")
     Dim dtIncoterm As New DataTable("dtIncoterm")
     Dim dtPartner As New DataTable("dtPartner")
     Dim dtSettings As New DataTable("dtSettings")
+    Dim dtLocTranslate As New DataTable("dtSettings")
 
     Sub direct()
         Dim sqlite_cmd As SQLiteCommand
@@ -56,36 +58,10 @@ Public Class frmMaininterface
     End Sub
 
 
-    Public Function UnixToTime(ByVal strUnixTime As String) As Date
-        UnixToTime = DateAdd(DateInterval.Second, Val(strUnixTime), #1/1/1970#)
-        If UnixToTime.IsDaylightSavingTime = True Then
-            UnixToTime = DateAdd(DateInterval.Hour, 1, UnixToTime)
-        End If
-    End Function
-
-    Public Function TimeToUnix(ByVal dteDate As Date) As String
-        If dteDate.IsDaylightSavingTime = True Then
-            dteDate = DateAdd(DateInterval.Hour, -1, dteDate)
-        End If
-        TimeToUnix = DateDiff(DateInterval.Second, #1/1/1970#, dteDate).ToString
-    End Function
-
-    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+    'Load
+    Private Sub frmMaininterface_Load(sender As Object, e As EventArgs) Handles MyBase.Load
         dbLoad("All")
-        xlsTango("C:\Users\HolyAbsolut\Desktop\Grohe_HUB\ex Tango ShipmentsGroheSearch_20180928_133614.xlsx", "Excel Export1")
-        DataGridView1.DataSource = dtShipments
-        'MsgBox(getPartnerID(TextBox1.Text).ToString)
-
-        'dbLoad("dtPartner")
-
-
-
-        'MsgBox(dtUNLOC.Rows.Count)
-        'DataGridView1.DataSource = dtUNLOC
-        'DataGridView1.Refresh()
-
     End Sub
-
 
     Sub dbLoad(ByVal table As String)
         Dim dbPath As String = "C:\Users\HolyAbsolut\Desktop\Grohe_HUB\data.sqlite"
@@ -111,6 +87,10 @@ Public Class frmMaininterface
                 daSettings = New SQLiteDataAdapter("Select * from stSettings", "Data Source='" & dbPath & "'")
                 daSettings.Fill(dtSettings)
                 Dim builderdaSettings = New SQLiteCommandBuilder(daSettings)
+            Case "dsLocTranslate"
+                daLocTranslate = New SQLiteDataAdapter("Select * from dsLocTranslate", "Data Source='" & dbPath & "'")
+                daLocTranslate.Fill(dtLocTranslate)
+                Dim builderdaLocTranslate = New SQLiteCommandBuilder(daLocTranslate)
             Case Else
                 daShipments = New SQLiteDataAdapter("Select * from dsShipments", "Data Source='" & dbPath & "'")
                 daShipments.Fill(dtShipments)
@@ -132,6 +112,9 @@ Public Class frmMaininterface
                 daSettings.Fill(dtSettings)
                 Dim builderdaSettings = New SQLiteCommandBuilder(daSettings)
 
+                daLocTranslate = New SQLiteDataAdapter("Select * from dsLocTranslate", "Data Source='" & dbPath & "'")
+                daLocTranslate.Fill(dtLocTranslate)
+                Dim builderdaLocTranslate = New SQLiteCommandBuilder(daLocTranslate)
         End Select
 
     End Sub
@@ -148,28 +131,33 @@ Public Class frmMaininterface
                 If daPartner IsNot Nothing Then daPartner.Update(dtPartner)
             Case "dtSettings"
                 If daSettings IsNot Nothing Then daSettings.Update(dtSettings)
+            Case "dtLocTranslate"
+                If daLocTranslate IsNot Nothing Then daLocTranslate.Update(dtLocTranslate)
             Case Else
                 If daShipments IsNot Nothing Then daShipments.Update(dtShipments)
                 If daUNLOC IsNot Nothing Then daUNLOC.Update(dtUNLOC)
                 If daIncoterm IsNot Nothing Then daIncoterm.Update(dtIncoterm)
                 If daPartner IsNot Nothing Then daPartner.Update(dtPartner)
                 If daSettings IsNot Nothing Then daSettings.Update(dtSettings)
+                If daLocTranslate IsNot Nothing Then daLocTranslate.Update(dtLocTranslate)
         End Select
     End Sub
 
 
+    'Functions
+    Public Function UnixToTime(ByVal strUnixTime As String) As Date
+        UnixToTime = DateAdd(DateInterval.Second, Val(strUnixTime), #1/1/1970#)
+        If UnixToTime.IsDaylightSavingTime = True Then
+            UnixToTime = DateAdd(DateInterval.Hour, 1, UnixToTime)
+        End If
+    End Function
 
-    Sub UNloc()
-
-        'dbLoad()
-        'Dim ne As DataRow = dtShipments.NewRow
-        'ne("Created") = 55
-        'dtShipments.Rows.Add(ne)
-        'MsgBox(dtShipments.Rows.Count.ToString)
-        'dbSave()
-
-
-    End Sub
+    Public Function TimeToUnix(ByVal dteDate As Date) As String
+        If dteDate.IsDaylightSavingTime = True Then
+            dteDate = DateAdd(DateInterval.Hour, -1, dteDate)
+        End If
+        TimeToUnix = DateDiff(DateInterval.Second, #1/1/1970#, dteDate).ToString
+    End Function
 
     Function chkShipment(ByVal STT_No As String, ByVal Archive_No As String) As Integer
         Dim SQlSearch As String = "Archive_No = '" & STT_No & "' OR STT_No = '" & Archive_No & "'"
@@ -253,13 +241,54 @@ Public Class frmMaininterface
         Return idPartner
     End Function
 
+    Function getUNLOC(ByVal locName As String) As String
+        'Erst in UNLOC suchen
+        'Dann in locTranslation suchen
+        'TODO neue locTranslation anlegen
+
+        Dim dtSearch As DataTable = dtUNLOC
+        Dim SQlSearch As String = "Name = '" & locName & "'"
+        dtSearch.DefaultView.RowFilter = SQlSearch ' Suche
+
+        If dtSearch.DefaultView.Count = 1 Then
+            Return dtSearch.DefaultView.Item(0).Row("UNLOC").ToString
+        Else
+            dtSearch = dtLocTranslate
+            SQlSearch = "Location = '" & locName & "'"
+            dtSearch.DefaultView.RowFilter = SQlSearch ' Suche
+            If dtSearch.DefaultView.Count = 1 Then
+                Return dtSearch.DefaultView.Item(0).Row("UNLOC").ToString
+            Else
+                Return "ZZZZZ"
+            End If
+        End If
+    End Function
+
+
+    'SUBs
+    Sub chkUNLOC(ByVal UNLOC As String)
+        Dim dtSearch As DataTable = dtUNLOC
+        Dim SQlSearch As String = "UNLOC = '" & UNLOC & "'"
+        dtSearch.DefaultView.RowFilter = SQlSearch ' Suche
+        If dtSearch.DefaultView.Count = 0 Then
+            'MsgBox("Ich lege an" & UNLOC)
+            Dim dsNewRow As DataRow
+            dsNewRow = dtUNLOC.NewRow
+            dsNewRow.Item("UNLOC") = UNLOC
+            dsNewRow.Item("Country") = UNLOC.Substring(0, 2)
+            dsNewRow.Item("Location") = UNLOC.Substring(2, 3)
+            dsNewRow.Item("Remarks") = "Added by chkUNLOC"
+            dtUNLOC.Rows.Add(dsNewRow)
+            dbSave("dtUNLOC")
+            dbLoad("dtUNLOC")
+        End If
+    End Sub
+
     Sub xlsTango(ByVal xlsFile As String, ByVal xlsTable As String)
         'im Background
         'mehree Dateien
         'Dateinen ggf Löschen
         'xlsSheet Name ggf aus den Settings auslesen
-
-        'Prüfen ob bereits vorhanden
 
         Dim MyConnection As System.Data.OleDb.OleDbConnection
         Dim ImportDtSet As System.Data.DataSet
@@ -285,14 +314,16 @@ Public Class frmMaininterface
                     Dim dsNewRow As DataRow
                     dsNewRow = dtShipments.NewRow ' Ursprünglich Table (2)
                     dsNewRow.Item("Created") = TimeToUnix(Date.Now)
-                    'dsNewRow.Item("Shipment_Type") = ImportRow(My.Settings.sttFile2C3).ToString
-                    'dsNewRow.Item("Load_Type") = ImportRow("Load Type").ToString
+                    dsNewRow.Item("Shipment_Type") = ImportRow("Shipment Type").ToString
+                    dsNewRow.Item("Service") = ImportRow("Load Type").ToString
                     dsNewRow.Item("Incoterm") = Incoterm(ImportRow("INCO Terms").ToString)
-                    'dsNewRow.Item("Incoterm_Loc") = ImportRow("Location").ToString
+                    dsNewRow.Item("Incoterm_Loc") = getUNLOC(ImportRow("Location").ToString)
                     ''dsNewRow.Item("From") = ImportRow("From").ToString
                     ''dsNewRow.Item("CY_CFS_Origin_Inland") = ImportRow("CY/CFS Origin Inland").ToString
-                    'dsNewRow.Item("POL") = ImportRow("Departure").ToString
-                    'dsNewRow.Item("POD") = ImportRow("Destination").ToString
+                    chkUNLOC(ImportRow("Departure").ToString)
+                    chkUNLOC(ImportRow("Destination").ToString)
+                    dsNewRow.Item("POL") = ImportRow("Departure").ToString
+                    dsNewRow.Item("POD") = ImportRow("Destination").ToString
                     ''dsNewRow.Item("CY_CFS_Destination_Inland") = ImportRow("CY/CFS Destination Inland").ToString
                     'dsNewRow.Item("To") = ImportRow("To").ToString
                     dsNewRow.Item("STT_No") = ImportRow("STT No#").ToString.ToString
@@ -318,30 +349,35 @@ Public Class frmMaininterface
                     MsgBox(EXC.Message)
                 End Try
             End If
-
-            Dim HBL As String
-            If ImportRow("HB/L No#").ToString <> "" Then
-                HBL = ImportRow("HB/L No#").ToString
-            Else
-                HBL = ImportRow("B/L No#").ToString
-            End If
-
-
-
-
         Next
-
-
-        'TangoTableAdapter.Adapter.Update(GroheDataSet, "Tango")
-        'Grohe_AccountingTableAdapter.Adapter.Update(GroheDataSet, "Grohe_Accounting")
-        'ImportDtSet.Clear()
-        'MsgBox("Done")
-        'MsgBox(Me.GroheDataSet.Grohe_Accounting.Count - initCount & " Sendungen importiert.")
         dbSave("dtShipments")
         MsgBox("Done")
     End Sub
 
-    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
-        DataGridView1.DataSource = dtPartner
+    Sub UNloc()
+
+        'dbLoad()
+        'Dim ne As DataRow = dtShipments.NewRow
+        'ne("Created") = 55
+        'dtShipments.Rows.Add(ne)
+        'MsgBox(dtShipments.Rows.Count.ToString)
+        'dbSave()
+
+
     End Sub
+
+    'Buttons
+    Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
+        xlsTango("C:\Users\HolyAbsolut\Desktop\Grohe_HUB\ex Tango ShipmentsGroheSearch_20180928_133614.xlsx", "Excel Export1")
+        DataGridView1.DataSource = dtShipments
+
+    End Sub
+
+    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        DataGridView1.DataSource = dtLocTranslate
+        Dim str As String = "CNSHA"
+        MsgBox(str.Substring(2, 3))
+    End Sub
+
+
 End Class
